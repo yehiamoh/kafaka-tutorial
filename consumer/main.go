@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -14,6 +15,12 @@ const (
 	topic      = "fancy-topic"
 	groupID    = "consumer-group1"
 )
+
+type JsonMessage struct{
+	ID int `json:"id"`
+	Content string `json:"content"`
+
+}
 
 func main() {
 	config := sarama.NewConfig()
@@ -46,8 +53,13 @@ func (h ConsumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error { ret
 
 func (h ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		fmt.Printf("Consumed message: %s, partition: %d, time: %s\n",
-			string(msg.Value), msg.Partition, time.Now().Format("05:000"))
+		val:=&JsonMessage{}
+		err:=json.Unmarshal(msg.Value,val)
+		if err!=nil{
+			log.Fatal("Couldn't decode the json :",err)
+		}
+		fmt.Printf("Consumed message: %v, partition: %d, time: %s\n",
+			val, msg.Partition, time.Now().Format("05:000"))
 		session.MarkMessage(msg, "")
 		time.Sleep(time.Second)
 	}

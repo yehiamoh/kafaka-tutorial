@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -12,7 +13,10 @@ const (
 	kafkaHost = "localhost:9092"
 	topic     = "fancy-topic"
 )
-
+type JsonMessage struct {
+	ID      int    `json:"id"`
+	Content string `json:"content"`
+}
 func main() {
 	config := sarama.NewConfig() // Client Libraray for Apache Kafka
 	config.Producer.Return.Successes=true
@@ -26,10 +30,18 @@ func main() {
 
 	i:=0 
 	for{
+		data:=JsonMessage{
+			ID: i,
+			Content: fmt.Sprintf("Message :%v",i),
+		}
+		jsonBytes,err:=json.Marshal(data)
+		if err!=nil{
+			log.Fatal("Couldn't Parse the json")
+		}
 		msg:=&sarama.ProducerMessage{
 			Topic: topic, //Topic For Kafka
 			Key: sarama.StringEncoder(fmt.Sprint(i)), // ID for the message used in partitioning
-			Value: sarama.StringEncoder(fmt.Sprintf("Message :%v",i)), // The value of the message
+			Value: sarama.ByteEncoder(jsonBytes), // The value of the message
 		}
 		partition,offset,err:=conn.SendMessage(msg) // sending message to the Topic
 		if err!=nil{
